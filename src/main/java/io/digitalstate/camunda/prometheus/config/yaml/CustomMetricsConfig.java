@@ -2,9 +2,11 @@ package io.digitalstate.camunda.prometheus.config.yaml;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.util.ResourceUtils;
+
+import java.net.URL;
 import java.util.Map;
 
 public class CustomMetricsConfig {
@@ -17,10 +19,11 @@ public class CustomMetricsConfig {
     private Map<String, Object> config;
 
     public void setCollector(String filePath) {
-        if (filePath.startsWith("classpath:")){
-            collector = new ClassPathResource(filePath.substring(10));
-        } else {
-            collector = new FileSystemResource(filePath);
+        try {
+            final URL url = ResourceUtils.getURL(filePath);
+            this.collector = new UrlResource(url);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

@@ -17,7 +17,7 @@ class ActivityDurationHelpers {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ActivityDurationHelpers.class);
 
-    private static Map<String, DurationTrackingConfig> yamlFile = PrometheusProcessEnginePlugin.getYamlConfig().getActivityDurationTrackingConfigs();
+    private static Map<String, DurationTrackingConfig> yamlFile = PrometheusProcessEnginePlugin.getYamlConfig().getDurationTracking();
 
     /**
      * Checks if the process definition has a tracking config in the documentation property of the BPMN

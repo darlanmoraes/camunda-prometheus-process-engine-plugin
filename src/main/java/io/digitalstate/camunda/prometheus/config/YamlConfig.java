@@ -1,7 +1,5 @@
 package io.digitalstate.camunda.prometheus.config;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
@@ -11,84 +9,41 @@ import io.digitalstate.camunda.prometheus.config.yaml.SystemMetricsConfig;
 import io.digitalstate.camunda.prometheus.config.yaml.YamlFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.ResourceUtils;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class YamlConfig {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper(new YAMLFactory());
     private static final Logger LOGGER = LoggerFactory.getLogger(YamlConfig.class);
 
-    private YamlFile yamlConfig = new YamlFile();
-    private List<SystemMetricsConfig> systemMetricsConfigs = new ArrayList<>();
-    private List<CustomMetricsConfig> customMetricsConfigs = new ArrayList<>();
-    private Map<String, DurationTrackingConfig> activityDurationTrackingConfigs = new HashMap<>();
+    private final YamlFile yaml;
 
-    public YamlConfig(String filePath) {
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        try {
-            // @TODO Add error handling for file not found
-            Path file = Paths.get(filePath);
-
-            // @TODO Add error handling for various read errors such as no system section, no custom section, etc.
-            yamlConfig = mapper.readValue(file.toFile(), YamlFile.class);
-
-            // System Metrics
-            if (yamlConfig != null && !yamlConfig.getSystem().isEmpty()) {
-                    systemMetricsConfigs = yamlConfig.getSystem();
-            } else {
-                LOGGER.warn("No Prometheus Camunda System Metrics were not found.");
-            }
-
-            // Custom metrics
-            if (yamlConfig != null && !yamlConfig.getCustom().isEmpty()) {
-                customMetricsConfigs = yamlConfig.getCustom();
-            } else {
-                LOGGER.info("No Custom Prometheus Metrics Collectors were found.");
-            }
-
-            // Activity Duration Tracking Configuration
-            if (yamlConfig != null && !yamlConfig.getDurationTracking().isEmpty()) {
-                activityDurationTrackingConfigs = yamlConfig.getDurationTracking();
-            } else {
-                LOGGER.info("No Activity Duration Tracking Configs for Prometheus Metrics were found.");
-            }
-
-        } catch (JsonParseException e) {
-            e.printStackTrace();
-        } catch (JsonMappingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (NullPointerException e){
-            LOGGER.error("Unable to parse YAML, likely due to bad YAML format.");
-            e.printStackTrace();
+    public YamlConfig(final String path) throws IOException {
+        if ((this.yaml = this.getYaml(path)) == null) {
+            throw new IOException("Yaml couldn't be loaded. path=" + path);
         }
+        LOGGER.info("Loaded yaml = {}", this.yaml);
     }
 
-
-    //
-    // SETTERS AND GETTER
-    //
-
-    public List<CustomMetricsConfig> getCustomMetricsConfigs() {
-        return customMetricsConfigs;
+    private YamlFile getYaml(final String path) throws IOException {
+        final File stream = ResourceUtils.getFile(path);
+        return MAPPER.readValue(stream, YamlFile.class);
     }
 
-    public List<SystemMetricsConfig> getSystemMetricsConfigs() {
-        return systemMetricsConfigs;
+    public List<CustomMetricsConfig> getCustom() {
+        return this.yaml.getCustom();
     }
 
-    public Map<String, DurationTrackingConfig> getActivityDurationTrackingConfigs() {
-        return activityDurationTrackingConfigs;
+    public List<SystemMetricsConfig> getSystem() {
+        return this.yaml.getSystem();
     }
 
-    public YamlFile getYamlConfig() {
-        return yamlConfig;
+    public Map<String, DurationTrackingConfig> getDurationTracking() {
+        return this.yaml.getDurationTracking();
     }
+
 }

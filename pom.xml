@@ -6,12 +6,20 @@
 
     <groupId>io.digitalstate.camunda.prometheus</groupId>
     <artifactId>camunda-prometheus-process-engine-plugin</artifactId>
-    <version>v1.8.0</version>
+    <version>v1.9.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Camunda Prometheus Process Engine Plugin</name>
 
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.6.RELEASE</version>
+    </parent>
+
     <properties>
+        <version.camunda>7.11.0</version.camunda>
+        <version.camundaSpringBoot>3.3.1</version.camundaSpringBoot>
         <version.camunda-bpm>7.12.0</version.camunda-bpm>
         <version.h2>1.4.190</version.h2>
         <version.java>1.8</version.java>
@@ -36,6 +44,23 @@
 
     <dependencies>
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.camunda.bpm.springboot</groupId>
+            <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+            <version>${version.camundaSpringBoot}</version>
+        </dependency>
 
         <!-- camunda process engine -->
         <dependency>
@@ -62,13 +87,6 @@
             <artifactId>camunda-spin-dataformat-xml-dom</artifactId>
 <!--            <version>1.5.1</version>-->
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jcl</artifactId>
-            <version>1.7.5</version>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -113,25 +131,10 @@
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
-            <version>2.10.2</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.10.2</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-core</artifactId>
-            <version>4.3.26.RELEASE</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-expression</artifactId>
-            <version>4.3.26.RELEASE</version>
-            <scope>compile</scope>
         </dependency>
 
         <dependency>

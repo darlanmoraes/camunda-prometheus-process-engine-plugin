@@ -44,7 +44,7 @@ public class PrometheusProcessEnginePlugin extends AbstractProcessEnginePlugin {
      * Polling Frequency and the Camunda Reporting reporting interval
      * Default Configuration is port 9999.
      */
-    private String port = "9999";
+    private Integer port = 9999;
 
     /**
      * The Interval for Camunda Reporting Metrics to execute on the DB.
@@ -84,128 +84,140 @@ public class PrometheusProcessEnginePlugin extends AbstractProcessEnginePlugin {
     final private CollectorRegistry registry = CollectorRegistry.defaultRegistry;
 
     @Override
-    public void preInit(ProcessEngineConfigurationImpl processEngineConfiguration) {
+    public void preInit(final ProcessEngineConfigurationImpl engine) {
 
-        // Get YAML Config File
-        yamlConfig = new YamlConfig(getCollectorYmlFilePath());
+        try {
+            // Get YAML Config File
+            yamlConfig = new YamlConfig(getCollectorYmlFilePath());
 
-        // Starts up the Prometheus Client HTTP Server
-        new MetricsExporter(new Integer(getPort()));
+            // Starts up the Prometheus Client HTTP Server
+            new MetricsExporter(this.getPort());
 
-        // Initialize Custom Parse Listeners
-        List<BpmnParseListener> parseListeners = processEngineConfiguration.getCustomPreBPMNParseListeners();
-        if (parseListeners == null) {
-            parseListeners = new ArrayList<BpmnParseListener>();
-            processEngineConfiguration.setCustomPreBPMNParseListeners(parseListeners);
-        }
-
-        // Add BPMN Parse Listener for Duration Tracking if it is set to True
-        if (Boolean.parseBoolean(bpmnDurationParseListener)){
-            // Add BPMN  Duration Tracking Parse Listener
-            parseListeners.add(new BpmnDurationTrackingParseListener());
-            LOGGER.info("Prometheus Bpmn Duration Parse Listener is Active");
-
-        } else {
-            LOGGER.info("Prometheus Bpmn Duration Parse Listener is Disabled");
-        }
-
-        // Add Grafana Annotation Reporting Parse Listener if set to True
-        if (Boolean.parseBoolean(getGrafanaAnnotationReporting())){
-            try {
-                URI grafanaServer = new URI(getGrafanaServer());
-
-                InputStream grafanaToken = new FileSystemResource(getGrafanaAuthTokenPath()).getInputStream();
-                String grafanaAuthToken = FileCopyUtils.copyToString(new InputStreamReader(grafanaToken));
-
-                parseListeners.add(new DeploymentReporterParseListener(grafanaServer, grafanaAuthToken));
-                LOGGER.info("Grafana Deployment Annotation Reporter Parse Listener is Active");
-                LOGGER.info("Grafana Annotation Server URL is set to: {}", grafanaServer.toURL().toString());
-
-            } catch (URISyntaxException e) {
-                LOGGER.error("Could not start Grafana Annotation Reporting due to URI error", e);
-            } catch (IOException e) {
-                LOGGER.error("Could not start Grafana Annotation Reporting due to IO error", e);
+            // Initialize Custom Parse Listeners
+            List<BpmnParseListener> parseListeners = engine.getCustomPreBPMNParseListeners();
+            if (parseListeners == null) {
+                parseListeners = new ArrayList<>();
+                engine.setCustomPreBPMNParseListeners(parseListeners);
             }
-        } else {
-            LOGGER.info("Grafana Deployment Annotation Reporter Parse Listener is Disabled");
+
+            // Add BPMN Parse Listener for Duration Tracking if it is set to True
+            if (Boolean.parseBoolean(bpmnDurationParseListener)) {
+                // Add BPMN  Duration Tracking Parse Listener
+                parseListeners.add(new BpmnDurationTrackingParseListener());
+                LOGGER.info("Prometheus Bpmn Duration Parse Listener is Active");
+
+            } else {
+                LOGGER.info("Prometheus Bpmn Duration Parse Listener is Disabled");
+            }
+
+            // Add Grafana Annotation Reporting Parse Listener if set to True
+            if (Boolean.parseBoolean(getGrafanaAnnotationReporting())) {
+                try {
+                    URI grafanaServer = new URI(getGrafanaServer());
+
+                    InputStream grafanaToken = new FileSystemResource(getGrafanaAuthTokenPath()).getInputStream();
+                    String grafanaAuthToken = FileCopyUtils.copyToString(new InputStreamReader(grafanaToken));
+
+                    parseListeners.add(new DeploymentReporterParseListener(grafanaServer, grafanaAuthToken));
+                    LOGGER.info("Grafana Deployment Annotation Reporter Parse Listener is Active");
+                    LOGGER.info("Grafana Annotation Server URL is set to: {}", grafanaServer.toURL().toString());
+
+                } catch (URISyntaxException e) {
+                    LOGGER.error("Could not start Grafana Annotation Reporting due to URI error", e);
+                } catch (IOException e) {
+                    LOGGER.error("Could not start Grafana Annotation Reporting due to IO error", e);
+                }
+            } else {
+                LOGGER.info("Grafana Deployment Annotation Reporter Parse Listener is Disabled");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     @Override
-    public void postInit(ProcessEngineConfigurationImpl processEngineConfiguration) {
+    public void postInit(ProcessEngineConfigurationImpl engine) {
         // Overrides the default Metrics reporter with a new instance that has a customized Reporting interval.
         // This allows the override of the built in 15min interval
         LOGGER.info("DbMetricsReporter is being started with Interval of: " + getCamundaReportingIntervalInSeconds() + " seconds.");
 
-        DbMetricsReporter metricsReporter = new DbMetricsReporter(processEngineConfiguration.getMetricsRegistry(),
-                processEngineConfiguration.getCommandExecutorTxRequired());
+        DbMetricsReporter metricsReporter = new DbMetricsReporter(engine.getMetricsRegistry(),
+                engine.getCommandExecutorTxRequired());
 
         metricsReporter.setReportingIntervalInSeconds(Long.parseLong(getCamundaReportingIntervalInSeconds()));
-        processEngineConfiguration.setDbMetricsReporter(metricsReporter);
+        engine.setDbMetricsReporter(metricsReporter);
     }
 
     @Override
     public void postProcessEngineBuild(ProcessEngine processEngine) {
         // Starts Prometheus reporting for the built in Camunda Metrics system.
-        new CamundaMetrics(yamlConfig.getSystemMetricsConfigs(), processEngine);
+        new CamundaMetrics(yamlConfig.getSystem(), processEngine);
 
         // Starts Prometheus reporting for Custom defined Metrics.
-        new CamundaCustomMetrics(yamlConfig.getCustomMetricsConfigs(), processEngine);
-    }
-
-
-    //
-    // SETTERS AND GETTERS
-    //
-
-    public void setPort(String port){
-        this.port = port;
-    }
-    public String getPort(){
-        return this.port;
-    }
-    public String getCamundaReportingIntervalInSeconds(){
-        return this.camundaReportingIntervalInSeconds;
-    }
-    public void setCamundaReportingIntervalInSeconds(String interval){
-        this.camundaReportingIntervalInSeconds = interval;
-    }
-    public void setCollectorYmlFilePath(String collectorYmlFilePath) {
-        this.collectorYmlFilePath = collectorYmlFilePath;
-    }
-    public String getCollectorYmlFilePath() {
-        return collectorYmlFilePath;
-    }
-
-    public String getBpmnDurationParseListener(){
-        return this.bpmnDurationParseListener;
-    }
-    public void setBpmnDurationParseListener(String bpmnDurationParseListener){
-        this.bpmnDurationParseListener = bpmnDurationParseListener;
+        new CamundaCustomMetrics(yamlConfig.getCustom(), processEngine);
     }
 
     public static YamlConfig getYamlConfig() {
         return yamlConfig;
     }
 
-    public void setGrafanaServer(String grafanaServer) {
-        this.grafanaServer = grafanaServer;
-    }
-    public String getGrafanaServer() {
-        return grafanaServer;
+    public Integer getPort() {
+        return port;
     }
 
-    public void setGrafanaAuthTokenPath(String grafanaAuthTokenPath) {
-        this.grafanaAuthTokenPath = grafanaAuthTokenPath;
+    public void setPort(Integer port) {
+        this.port = port;
     }
-    public String getGrafanaAuthTokenPath() {
-        return grafanaAuthTokenPath;
+
+    public String getCamundaReportingIntervalInSeconds() {
+        return camundaReportingIntervalInSeconds;
+    }
+
+    public void setCamundaReportingIntervalInSeconds(String camundaReportingIntervalInSeconds) {
+        this.camundaReportingIntervalInSeconds = camundaReportingIntervalInSeconds;
+    }
+
+    public String getCollectorYmlFilePath() {
+        return collectorYmlFilePath;
+    }
+
+    public void setCollectorYmlFilePath(String collectorYmlFilePath) {
+        this.collectorYmlFilePath = collectorYmlFilePath;
+    }
+
+    public String getBpmnDurationParseListener() {
+        return bpmnDurationParseListener;
+    }
+
+    public void setBpmnDurationParseListener(String bpmnDurationParseListener) {
+        this.bpmnDurationParseListener = bpmnDurationParseListener;
+    }
+
+    public String getGrafanaAnnotationReporting() {
+        return grafanaAnnotationReporting;
     }
 
     public void setGrafanaAnnotationReporting(String grafanaAnnotationReporting) {
         this.grafanaAnnotationReporting = grafanaAnnotationReporting;
     }
-    public String getGrafanaAnnotationReporting() {
-        return grafanaAnnotationReporting;
+
+    public String getGrafanaServer() {
+        return grafanaServer;
+    }
+
+    public void setGrafanaServer(String grafanaServer) {
+        this.grafanaServer = grafanaServer;
+    }
+
+    public String getGrafanaAuthTokenPath() {
+        return grafanaAuthTokenPath;
+    }
+
+    public void setGrafanaAuthTokenPath(String grafanaAuthTokenPath) {
+        this.grafanaAuthTokenPath = grafanaAuthTokenPath;
+    }
+
+    public CollectorRegistry getRegistry() {
+        return registry;
     }
 }

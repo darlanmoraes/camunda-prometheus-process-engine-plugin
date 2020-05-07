@@ -6,34 +6,22 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-class MetricsExporter {
+public class MetricsExporter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MetricsExporter.class);
+    private final HTTPServer server;
 
     /**
      * Starts HTTPServer for Prometheus on the defined port.
      * @param port The Port to expose the HTTP Server that Prometheus will connect to.
      */
-    MetricsExporter(int port) {
-        LOGGER.info("Starting HTTP Server for Prometheus Metrics Exporting on Port: " + port);
-        try{
-            HTTPServer server = new HTTPServer(port);
-        } catch(IOException e){
-            LOGGER.error("Unable to load HTTP Server for Prometheus Plugin: " + e.getMessage());
-        }
-
+    public MetricsExporter(int port) throws IOException {
+        LOGGER.info("Starting server for Prometheus metrics on port: " + port);
+        this.server = new HTTPServer(port);
     }
 
-    /**
-     * Starts HTTPServer for Prometheus on port 9999.
-     */
-    MetricsExporter() {
-        int port = 9999;
-        LOGGER.info("Starting HTTP Server for Prometheus Metrics Exporting on port: " + port);
-        try {
-            HTTPServer server = new HTTPServer(port, true);
-        } catch(IOException e){
-            LOGGER.error("Unable to load HTTP Server for Prometheus Plugin: " + e.getMessage());
-        }
+    public void stop() {
+        this.server.stop();
     }
+
 }

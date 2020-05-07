@@ -15,7 +15,7 @@ import java.util.Map;
 class ProcessDurationHelpers {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProcessDurationHelpers.class);
-    private static Map<String, DurationTrackingConfig> yamlFile = PrometheusProcessEnginePlugin.getYamlConfig().getActivityDurationTrackingConfigs();
+    private static Map<String, DurationTrackingConfig> yamlFile = PrometheusProcessEnginePlugin.getYamlConfig().getDurationTracking();
 
     /**
      * Determines if Process Duration Tracking is found in the Process Definition
